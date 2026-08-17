@@ -1,0 +1,859 @@
+:root {
+      /* ---------------------------------------------------------------- tokens
+       * One definition per colour role. Before this the stylesheet held 57
+       * distinct hex values with no system, so "the border colour" was four
+       * different greys depending on which component you landed in, and dark
+       * mode was impossible without touching every rule.
+       *
+       * Two scales, deliberately separate:
+       *
+       * 1. Brand/neutral - surfaces, borders, text, and ONE accent. The accent
+       *    is locked: every interactive affordance in the app uses it.
+       * 2. Risk - encodes DATA, not brand. 严重/高/中/低 must stay legible as a
+       *    ranked scale even if the brand colour changes tomorrow, so they are
+       *    never expressed in terms of the accent.
+       *
+       * Dark mode redefines these values and nothing else. */
+
+      /* Neutrals */
+      --surface-page: #f5f7fb;
+      --surface: #ffffff;
+      --surface-subtle: #f8fafc;
+      --surface-muted: #f1f5f9;
+      --surface-hover: #f8fbff;
+      --border: #e2e8f0;
+      --border-subtle: #edf2f7;
+      --border-strong: #cbd5e1;
+      --text: #1e293b;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+
+      /* The one accent. Not to be joined by a second. */
+      --accent: #2563eb;
+      --accent-strong: #1d4ed8;
+      --accent-deep: #1e40af;
+      --accent-contrast: #ffffff;
+      --accent-soft: #eff6ff;
+      --accent-soft-border: #bfdbfe;
+
+      /* Risk scale. Ranked, and readable as a ranking. */
+      --risk-critical-fg: #7f1d1d;
+      --risk-critical-bg: #fee2e2;
+      --risk-critical-border: #fca5a5;
+      --risk-critical-wash: #fef2f2;
+      --risk-high-fg: #9a3412;
+      --risk-high-bg: #ffedd5;
+      --risk-high-border: #fed7aa;
+      --risk-high-wash: #fff7ed;
+      --risk-medium-fg: #78350f;
+      --risk-medium-bg: #fef3c7;
+      --risk-medium-border: #fcd34d;
+      --risk-medium-wash: #fffbeb;
+      --risk-low-fg: #14532d;
+      --risk-low-bg: #dcfce7;
+      --risk-low-border: #86efac;
+      --risk-low-wash: #ecfdf5;
+      --info-fg: #075985;
+      --info-bg: #e0f2fe;
+      --info-border: #7dd3fc;
+
+      /* Shape. Two steps and a pill, no one-offs. */
+      --radius: 6px;
+      --radius-lg: 8px;
+      --radius-pill: 999px;
+
+      /* Numeric columns. Scores, amounts and dates have to align to be
+       * comparable by eye across 65 rows. */
+      --font-numeric: "SF Mono", "Cascadia Mono", "JetBrains Mono", Consolas, monospace;
+
+      color-scheme: light dark;
+      font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      background: var(--surface-page);
+      color: var(--text);
+    }
+
+    /* Dark mode redefines the tokens and nothing else. Hierarchy parity is the
+     * requirement: what stands out in light must stand out in dark.
+     *
+     * Three states, which is why the values appear twice below:
+     *   no data-theme attribute -> follow the system
+     *   data-theme="light"      -> force light even if the system is dark
+     *   data-theme="dark"       -> force dark even if the system is light
+     * The media query is guarded with :not([data-theme="light"]) so an
+     * explicit light choice is not overridden by a dark system setting, and
+     * the attribute rule is repeated outside the query so an explicit dark
+     * choice works on a light system. Defining these values only inside the
+     * media query would make the toggle a no-op in one direction. */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --surface-page: #0f151f;
+        --surface: #151d2b;
+        --surface-subtle: #1a2434;
+        --surface-muted: #1f2a3c;
+        --surface-hover: #1d2839;
+        --border: #2b384c;
+        --border-subtle: #232f42;
+        --border-strong: #3a4a63;
+        --text: #e6edf7;
+        --text-secondary: #b6c4d8;
+        --text-muted: #8fa0b8;
+        --text-faint: #6b7d96;
+
+        --accent: #4b83f0;
+        --accent-strong: #6698f5;
+        --accent-deep: #8fb3f8;
+        --accent-contrast: #0b1119;
+        --accent-soft: #1a2740;
+        --accent-soft-border: #2f4a75;
+
+        --risk-critical-fg: #ffb4ab;
+        --risk-critical-bg: #3d1a1a;
+        --risk-critical-border: #7a3232;
+        --risk-critical-wash: #2a1414;
+        --risk-high-fg: #ffc89a;
+        --risk-high-bg: #3d2612;
+        --risk-high-border: #7a4c24;
+        --risk-high-wash: #2a1b0e;
+        --risk-medium-fg: #f5d78b;
+        --risk-medium-bg: #3a2f10;
+        --risk-medium-border: #6e5a20;
+        --risk-medium-wash: #26200c;
+        --risk-low-fg: #8fe3ab;
+        --risk-low-bg: #14331f;
+        --risk-low-border: #2c6640;
+        --risk-low-wash: #0f2417;
+        --info-fg: #8ed2f5;
+        --info-bg: #12303f;
+        --info-border: #2a5f7a;
+      }
+    }
+
+    /* The same values again, OUTSIDE the media query. This repetition is the
+     * point: defined only inside it, forcing dark on a light system would do
+     * nothing, because the rule would never match. Verified in the browser -
+     * the first version of this file had exactly that bug. */
+    :root[data-theme="dark"] {
+        --surface-page: #0f151f;
+        --surface: #151d2b;
+        --surface-subtle: #1a2434;
+        --surface-muted: #1f2a3c;
+        --surface-hover: #1d2839;
+        --border: #2b384c;
+        --border-subtle: #232f42;
+        --border-strong: #3a4a63;
+        --text: #e6edf7;
+        --text-secondary: #b6c4d8;
+        --text-muted: #8fa0b8;
+        --text-faint: #6b7d96;
+
+        --accent: #4b83f0;
+        --accent-strong: #6698f5;
+        --accent-deep: #8fb3f8;
+        --accent-contrast: #0b1119;
+        --accent-soft: #1a2740;
+        --accent-soft-border: #2f4a75;
+
+        --risk-critical-fg: #ffb4ab;
+        --risk-critical-bg: #3d1a1a;
+        --risk-critical-border: #7a3232;
+        --risk-critical-wash: #2a1414;
+        --risk-high-fg: #ffc89a;
+        --risk-high-bg: #3d2612;
+        --risk-high-border: #7a4c24;
+        --risk-high-wash: #2a1b0e;
+        --risk-medium-fg: #f5d78b;
+        --risk-medium-bg: #3a2f10;
+        --risk-medium-border: #6e5a20;
+        --risk-medium-wash: #26200c;
+        --risk-low-fg: #8fe3ab;
+        --risk-low-bg: #14331f;
+        --risk-low-border: #2c6640;
+        --risk-low-wash: #0f2417;
+        --info-fg: #8ed2f5;
+        --info-bg: #12303f;
+        --info-border: #2a5f7a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 22px; background: var(--surface); border-bottom: 1px solid var(--border);
+      gap: 16px; flex-wrap: wrap;
+    }
+    h1 { margin: 0; font-size: 19px; line-height: 1.2; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    h3 { margin: 14px 0 8px; font-size: 14px; }
+    .auth { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    main { max-width: 1440px; margin: 0 auto; padding: 18px 22px 28px; }
+    input, button, select {
+      height: 34px; border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 0 10px;
+      background: var(--surface); font-size: 13px; color: var(--text);
+    }
+    input { min-width: 180px; }
+    input[type="checkbox"] { min-width: 0; width: 16px; height: 16px; padding: 0; }
+    button { cursor: pointer; background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); white-space: nowrap; }
+    button.secondary { color: var(--accent-strong); background: var(--surface); }
+    button.ghost { color: var(--text-secondary); background: var(--surface-subtle); border-color: var(--border-strong); }
+    button.link { height: auto; padding: 0; border: 0; background: transparent; color: var(--accent-strong); white-space: normal; text-align: left; }
+    button:disabled { opacity: .55; cursor: default; }
+    section {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px;
+      min-width: 0;
+    }
+    .metrics { display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; min-height: 76px; }
+    .metric span { display: block; color: var(--text-muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 8px; font-size: 22px; line-height: 1; }
+    .toolbar {
+      display: grid; grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(120px, .8fr)) auto auto;
+      gap: 8px; margin-bottom: 12px; align-items: center;
+    }
+    .layoutbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 8px; }
+    .layoutbar-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .layoutbar button { min-width: 34px; padding: 0 9px; }
+    .layoutbar button.active { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-contrast); }
+    .view-settings-panel { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto auto; gap: 10px; align-items: center; margin: 0 0 12px; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+    .view-setting { display: grid; gap: 4px; min-width: 0; }
+    .view-setting span { display: flex; justify-content: space-between; gap: 8px; }
+    .view-setting input[type="range"] { width: 100%; min-width: 0; padding: 0; }
+    .view-settings-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .grid { --risk-layout-columns: minmax(0, 8fr) 8px minmax(280px, 2fr); display: grid; grid-template-columns: var(--risk-layout-columns); gap: 0; align-items: stretch; }
+    .layout-splitter { position: relative; min-width: 8px; cursor: col-resize; touch-action: none; }
+    .layout-splitter::after { content: ""; position: absolute; inset: 8px 2px; border-radius: var(--radius-pill); background: var(--border-strong); opacity: .65; }
+    .layout-splitter:hover::after, .grid.resizing .layout-splitter::after { background: var(--accent); opacity: .9; }
+    .grid.resizing { user-select: none; }
+    .grid.layout-stacked { grid-template-columns: 1fr; gap: 12px; }
+    .grid.layout-stacked .layout-splitter { display: none; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .bulkbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 9px 0 12px; }
+    .bulk-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .batch-panel { border: 1px solid var(--accent-soft-border); background: var(--accent-soft); border-radius: var(--radius-lg); padding: 10px; margin-bottom: 10px; }
+    .batch-items { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; max-height: 170px; overflow: auto; padding-right: 4px; }
+    .batch-item { border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); padding: 3px 8px; font-size: 12px; color: var(--text-secondary); }
+    .table-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .table-tools-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .table-tools button { min-width: 34px; padding: 0 9px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; border-bottom: 1px solid var(--border-subtle); padding: 9px 8px; vertical-align: top; }
+    th { color: var(--text-muted); font-weight: 600; background: var(--surface-subtle); position: sticky; top: 0; z-index: 2; }
+    tbody tr:hover { background: var(--surface-hover); }
+    .name-cell { max-width: 360px; }
+    .project-table { table-layout: fixed; min-width: 1120px; }
+    .project-table th:nth-child(1), .project-table td:nth-child(1) { width: 52px; }
+    .project-table th:nth-child(2), .project-table td:nth-child(2) { width: 78px; }
+    .project-table th:nth-child(5), .project-table td:nth-child(5) { width: 82px; }
+    .project-table th:nth-child(6), .project-table td:nth-child(6) { width: 82px; }
+    .project-table th:nth-child(7), .project-table td:nth-child(7) { width: 96px; }
+    .project-table th:nth-child(8), .project-table td:nth-child(8) { width: 112px; }
+    .action-cell { width: 112px; min-width: 112px; }
+    .action-cell button { width: 82px; }
+    .grid.compact-table th, .grid.compact-table td { padding: 6px 7px; }
+    .grid.compact-table table { font-size: 12px; }
+    .grid.compact-table .action-cell button { height: 28px; }
+    .muted { color: var(--text-muted); }
+    .small { font-size: 12px; }
+    .badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+    .risk-low { color: var(--risk-low-fg); background: var(--risk-low-wash); border-color: var(--risk-low-border); }
+    .risk-mid { color: var(--risk-medium-fg); background: var(--risk-medium-wash); border-color: var(--risk-medium-border); }
+    .risk-high { color: var(--risk-high-fg); background: var(--risk-high-wash); border-color: var(--risk-high-border); }
+    .risk-severe { color: var(--risk-critical-fg); background: var(--risk-critical-wash); border-color: var(--risk-critical-border); }
+    .detail-summary { line-height: 1.7; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px; }
+    /* The model's explanation is parsed into real elements rather than dumped
+       in as escaped text, so these style actual structure. See the comment on
+       parseRiskMarkdown in app.js for why the old approach produced one
+       run-on line. */
+    .risk-md-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .risk-md-heading { margin: 12px 0 4px; font-size: 13px; color: var(--text-secondary); letter-spacing: .02em; }
+    .risk-md-heading:first-child { margin-top: 0; }
+    .risk-md-paragraph { margin: 0 0 8px; }
+    .risk-md-rule { border: 0; border-top: 1px solid var(--border-subtle); margin: 10px 0; }
+    .risk-md-list { margin: 0 0 8px; padding-inline-start: 20px; }
+    .risk-md-list li { margin-bottom: 3px; }
+    .risk-md-list li.depth-1 { margin-inline-start: 16px; }
+    .risk-md-list li.depth-2 { margin-inline-start: 32px; }
+    /* A wide dimension table scrolls inside the panel; the detail column must
+       never be the thing that scrolls sideways. */
+    .risk-md-table-wrap { overflow-x: auto; margin: 0 0 10px; }
+    .risk-md-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    .risk-md-table th, .risk-md-table td { border: 1px solid var(--border); padding: 5px 8px; text-align: left; vertical-align: top; }
+    /* Explicit --text: inheriting left the header on --text-secondary, measured
+       at 4.55:1 against --surface-subtle. That clears AA by 0.05, which is not
+       a margin - a column header is the label you read to make sense of every
+       row under it. Written as --text-primary first, which does not exist;
+       an undefined var() makes `color` invalid and an inherited property then
+       falls back to `inherit`, so it looked right in the browser while being
+       wrong in the stylesheet. The token test caught it. */
+    .risk-md-table th { background: var(--surface-subtle); color: var(--text); font-weight: 600; white-space: nowrap; }
+    .risk-md-table tbody tr:nth-child(even) { background: var(--surface-subtle); }
+    .dimension-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .dimension { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; background: var(--surface-subtle); }
+    .dimension div { display: flex; justify-content: space-between; gap: 8px; }
+    .dimension progress { width: 100%; height: 8px; margin-top: 6px; }
+    .list { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+    .list li { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; background: var(--surface-subtle); }
+    .pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .status-line { min-height: 20px; margin-bottom: 8px; color: var(--text-muted); font-size: 12px; }
+    .hidden { display: none !important; }
+    .progress-panel { border-bottom: 1px solid var(--border-subtle); padding: 0 0 10px; margin: 0 0 10px; }
+    .progress-head { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+    .progress-bar { height: 8px; overflow: hidden; background: var(--border); border-radius: var(--radius-pill); }
+    .progress-fill { width: 0%; height: 100%; background: var(--accent); transition: width .25s ease; }
+    .table-wrap { --risk-table-zoom: .85; overflow: auto; max-height: calc(100vh - 290px); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
+    .table-wrap.pan-enabled { cursor: grab; }
+    .table-wrap.panning { cursor: grabbing; user-select: none; }
+    .table-surface { transform: scale(var(--risk-table-zoom)); transform-origin: 0 0; width: calc(100% / var(--risk-table-zoom)); }
+    .main-chat-launch { display: flex; justify-content: flex-end; margin: -4px 0 12px; }
+    .main-chat-float { position: fixed; right: 22px; bottom: 22px; z-index: 18; width: min(520px, calc(100vw - 24px)); height: min(620px, calc(100dvh - 24px)); display: grid; grid-template-rows: auto 1fr; overflow: hidden; background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: 0 18px 45px rgba(15, 23, 42, .22); }
+    .main-chat-float.hidden { display: none; }
+    .main-chat-float.minimized { grid-template-rows: auto; }
+    .main-chat-float.minimized .main-chat-float-body { display: none; }
+    .main-chat-float-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--surface-subtle); border-bottom: 1px solid var(--border); cursor: grab; touch-action: none; }
+    .main-chat-float.dragging .main-chat-float-header { cursor: grabbing; }
+    .main-chat-float-title { font-weight: 700; font-size: 13px; color: var(--text); }
+    .main-chat-float-actions { display: flex; align-items: center; gap: 6px; }
+    .main-chat-float-actions button { min-width: 34px; padding: 0 9px; }
+    .main-chat-float-body { display: grid; grid-template-rows: minmax(180px, 1fr) auto auto auto; gap: 10px; min-height: 0; overflow: auto; padding: 12px; }
+    .main-chat-layout { display: grid; grid-template-columns: minmax(150px, .9fr) minmax(160px, 1fr) minmax(150px, 1fr) auto; gap: 8px; align-items: center; }
+    .main-chat-log { min-height: 180px; max-height: 320px; }
+    .main-chat-form { margin: 0; }
+    .main-chat-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+    .main-chat-input-actions { display: grid; align-content: end; gap: 8px; min-width: 88px; }
+    .main-chat-input-actions .chat-remember { grid-column: auto; }
+    .main-chat-resize-handle { position: absolute; right: 0; bottom: 0; width: 18px; height: 18px; border: 0; padding: 0; background: transparent; cursor: nwse-resize; touch-action: none; }
+    .main-chat-resize-handle::before { content: ""; position: absolute; right: 4px; bottom: 4px; width: 9px; height: 9px; border-right: 2px solid var(--text-faint); border-bottom: 2px solid var(--text-faint); }
+    .main-chat-float.resizing { user-select: none; }
+    .modal-backdrop { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 22px; background: rgba(15, 23, 42, .42); z-index: 20; }
+    .modal { width: min(980px, 100%); max-height: min(760px, calc(100vh - 44px)); overflow: auto; scrollbar-gutter: stable; background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border-strong); box-shadow: 0 18px 50px rgba(15, 23, 42, .22); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .modal-body { padding: 16px; display: grid; gap: 14px; }
+    body.modal-open { overflow: hidden; }
+    .modal-summary { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+    .modal-stat { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; background: var(--surface-subtle); }
+    .modal-stat span { display: block; color: var(--text-muted); font-size: 12px; }
+    .modal-stat strong { display: block; margin-top: 6px; font-size: 20px; }
+    .chat-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-subtle); }
+    .chat-panel > summary { cursor: pointer; padding: 10px 12px; font-weight: 700; color: var(--text); border-bottom: 1px solid transparent; }
+    .chat-panel[open] > summary { border-bottom-color: var(--border); }
+    .chat-body { display: grid; gap: 10px; padding: 12px; }
+    .chat-toolbar { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 8px; align-items: center; }
+    .chat-log { display: grid; gap: 8px; max-height: 280px; overflow: auto; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .chat-message { display: grid; gap: 4px; max-width: 86%; }
+    .chat-message.user { justify-self: end; }
+    .chat-message.assistant { justify-self: start; }
+    .chat-meta { font-size: 11px; color: var(--text-muted); }
+    .chat-bubble { padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-subtle); line-height: 1.65; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .chat-message.user .chat-bubble { background: var(--accent-soft); border-color: var(--accent-soft-border); }
+    /* Assistant bubbles hold the same parsed blocks as the risk panel. The
+       bubble already provides the outer padding, so the first and last block
+       must not add their own or every answer gains a blank line at each end. */
+    .chat-bubble > .risk-md-heading:first-child { margin-top: 0; }
+    .chat-bubble > :last-child { margin-bottom: 0; }
+    .chat-bubble .risk-md-table { font-size: 12px; }
+    .chat-citations { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chat-citation { border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-secondary); padding: 2px 7px; font-size: 12px; }
+    .chat-error { border: 1px solid var(--risk-critical-border); background: var(--risk-critical-wash); color: var(--risk-critical-fg); border-radius: var(--radius); padding: 8px; }
+    .chat-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+    .chat-form textarea { min-height: 58px; resize: vertical; border: 1px solid var(--border-strong); border-radius: var(--radius); padding: 8px 10px; font: inherit; line-height: 1.5; color: var(--text); }
+    .main-chat-form { display: block; }
+    .chat-remember { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+    .contract-discovery-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-subtle); padding: 12px; }
+    .contract-action-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .contract-status-strip { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 28px; }
+    .contract-status-pill { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--text-secondary); font-size: 12px; }
+    .contract-discovery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .contract-discovery-panel h3, .contract-discovery-panel h4 { margin: 0; }
+    .contract-discovery-panel h4 { font-size: 13px; color: var(--text-secondary); }
+    .contract-list { display: grid; gap: 6px; margin-top: 8px; }
+    .contract-item { display: grid; gap: 2px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 12px; color: var(--text-secondary); }
+    .contract-item span:first-child { color: var(--text); font-weight: 700; }
+    .contract-scope-note { margin: 6px 0 0; padding: 7px 9px; border: 1px solid var(--risk-medium-border); border-radius: var(--radius); background: var(--risk-medium-wash); color: var(--risk-medium-fg); font-size: 12px; line-height: 1.5; }
+    /* Stronger than the standing scope note: this one says rows are being
+       hidden right now, which the reader has to act on rather than absorb. */
+    .contract-scope-note.warn { border-color: var(--risk-critical-border); background: var(--risk-critical-wash); color: var(--risk-critical-fg); }
+    .portfolio-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); padding: 10px 12px; margin-bottom: 12px; }
+    .portfolio-panel > summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .portfolio-body { margin-top: 10px; display: grid; gap: 8px; }
+    .portfolio-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 12px; }
+    .portfolio-panel h4 { margin: 0; font-size: 13px; color: var(--text-secondary); }
+    @media (max-width: 760px) { .portfolio-grid { grid-template-columns: 1fr; } }
+    .contract-findings { display: grid; gap: 6px; margin-top: 8px; }
+    .contract-finding { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 12px; }
+    .contract-finding-body { display: grid; gap: 2px; min-width: 0; }
+    .contract-finding-reason { color: var(--text); font-weight: 700; }
+    .contract-finding-meta { color: var(--text-muted); word-break: break-all; }
+    .contract-severity { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; height: 22px; padding: 0 7px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; border: 1px solid transparent; }
+    .contract-severity.sev-critical { background: var(--risk-critical-bg); color: var(--risk-critical-fg); border-color: var(--risk-critical-border); }
+    .contract-severity.sev-high { background: var(--risk-high-bg); color: var(--risk-high-fg); border-color: var(--risk-high-border); }
+    .contract-severity.sev-medium { background: var(--risk-medium-bg); color: var(--risk-medium-fg); border-color: var(--risk-medium-border); }
+    .contract-severity.sev-low { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-border); }
+    .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .chart { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; min-height: 120px; }
+    .bar-row { display: grid; grid-template-columns: minmax(92px, .7fr) minmax(100px, 1fr) 42px; gap: 8px; align-items: center; margin: 8px 0; font-size: 12px; }
+    .bar-track { height: 8px; background: var(--border); border-radius: var(--radius-pill); overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent); }
+    .history-trend { width: 100%; min-height: 0; }
+    .history-trend svg { display: block; width: 100%; height: auto; }
+    .history-trend .trend-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+    .history-trend .trend-axis-label { fill: var(--text-muted); font-size: 11px; }
+    .history-trend .trend-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+    .history-trend .trend-point { fill: var(--surface); stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .history-trend-empty { display: flex; align-items: center; min-height: 160px; }
+    pre { white-space: pre-wrap; word-break: break-word; background: var(--surface-subtle); padding: 10px; border-radius: var(--radius); max-height: 260px; overflow: auto; }
+    @media (max-width: 1120px) {
+      .metrics { grid-template-columns: repeat(3, 1fr); }
+      .toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .view-settings-panel { grid-template-columns: 1fr 1fr; }
+      .grid { grid-template-columns: 1fr; gap: 12px; }
+      .layout-splitter { display: none; }
+      .main-chat-layout { grid-template-columns: 1fr 1fr; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .table-wrap { max-height: none; }
+    }
+    @media (max-width: 680px) {
+      main { padding: 12px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .toolbar { grid-template-columns: 1fr; }
+      .dimension-grid { grid-template-columns: 1fr; }
+      .modal-summary { grid-template-columns: repeat(2, 1fr); }
+      .modal-backdrop { align-items: flex-start; padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+      .modal { max-height: calc(100dvh - 20px); }
+      .chat-toolbar, .chat-form, .main-chat-layout, .main-chat-input-row, .view-settings-panel { grid-template-columns: 1fr; }
+      .contract-discovery-grid { grid-template-columns: 1fr; }
+      .chat-log { max-height: 34dvh; }
+      .chat-message { max-width: 100%; }
+      .chat-form textarea, .chat-form button, .chat-toolbar select, .chat-toolbar button { min-height: 44px; }
+      input, select, button { width: 100%; }
+      input[type="checkbox"] { width: 16px; }
+    }
+
+/* ---------------------------------------------- left navigation and views */
+/* Added 2026-08-12 with the two-section restructure. Reuses the existing
+   colour and spacing tokens so the contract module matches the project one. */
+.shell { display: flex; align-items: flex-start; gap: 0; }
+.sidenav {
+  flex: 0 0 208px;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  padding: 20px 12px;
+  border-right: 1px solid var(--border);
+  min-height: 100vh;
+  background: var(--surface-subtle);
+}
+.nav-group { margin-bottom: 22px; }
+.nav-group-title {
+  font-size: 12px; font-weight: 700; letter-spacing: .06em;
+  color: var(--text-muted); text-transform: none; padding: 0 10px 8px;
+}
+.nav-item {
+  display: block; width: 100%; text-align: left;
+  padding: 9px 10px; margin-bottom: 2px;
+  background: transparent; border: 0; border-radius: var(--radius);
+  color: var(--text-secondary); font-size: 14px; cursor: pointer;
+}
+.nav-item:hover { background: var(--border); }
+.nav-item.active { background: var(--accent-strong); color: var(--accent-contrast); font-weight: 600; }
+.shell > main { flex: 1 1 auto; min-width: 0; }
+.app-view[hidden] { display: none; }
+
+.breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.view-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.view-head h2 { margin: 0; font-size: 20px; }
+.view-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ------------------------------------------------------------- filter bar */
+.filter-panel { margin-bottom: 12px; }
+.filter-panel > summary {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface-subtle); font-size: 13px; color: var(--text-secondary); user-select: none;
+}
+.filter-panel > summary:hover { background: var(--surface-muted); }
+.filter-panel[open] > summary { border-radius: var(--radius-lg) 8px 0 0; border-bottom: none; }
+.filter-summary-label { font-weight: 600; }
+/* An active filter has to look active while collapsed, or a narrowed table
+   reads as the whole table. */
+.filter-panel.is-filtered > summary {
+  background: var(--accent-soft); border-color: var(--accent-soft-border); color: var(--accent-strong);
+}
+.filter-panel[open] .filter-bar { border-radius: 0 0 8px 8px; margin-bottom: 0; }
+.filter-bar {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end;
+  padding: 12px 14px; margin-bottom: 12px;
+  background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.filter-bar label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.filter-bar select, .filter-bar input {
+  padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius);
+  font-size: 13px; background: var(--surface); min-width: 120px;
+}
+.filter-bar .filter-search input { min-width: 200px; }
+.filter-bar select:disabled { background: var(--border); color: var(--text-faint); }
+
+/* -------------------------------------------------------------- saved views */
+.saved-views {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 14px; border: 1px solid var(--border); border-top: none;
+  background: var(--surface);
+}
+.saved-view-list { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; }
+.saved-view-chip {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding: 2px 4px 2px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-pill);
+  background: var(--surface-subtle); font-size: 12px;
+}
+.saved-view-chip .link-button { font-size: 12px; }
+.saved-view-remove {
+  border: none; background: none; cursor: pointer; color: var(--text-faint);
+  font-size: 14px; line-height: 1; padding: 0 4px;
+}
+.saved-view-remove:hover { color: var(--risk-critical-fg); }
+.saved-views input {
+  padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius);
+  font-size: 12px; min-width: 180px;
+}
+
+/* ------------------------------------------------------- stale rule banner */
+.stale-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px;
+  border: 1px solid var(--risk-medium-border); border-radius: var(--radius-lg); background: var(--risk-medium-wash); color: var(--risk-medium-fg);
+}
+.stale-banner strong { display: block; font-size: 13px; }
+.stale-banner .small { display: block; margin-top: 2px; color: var(--risk-medium-fg); }
+.stale-banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* Action tier. Shown beside the score because the score alone cannot triage:
+   one rule sets the floor for 71% of projects, so most of them share a band. */
+/* One badge primitive. There were three near-identical base rules
+   (.badge, .tier-badge, .annotation-badge) plus .contract-severity, each with
+   its own padding and radius, so a row could show three status pills in three
+   slightly different shapes. The variant classes carry colour only. */
+.tier-badge, 
+.tier-badge { margin-right: 5px; }
+.tier-badge.tier-act_now { background: var(--risk-critical-bg); border-color: var(--risk-critical-border); color: var(--risk-critical-fg); }
+.tier-badge.tier-plan { background: var(--risk-medium-bg); border-color: var(--risk-medium-border); color: var(--risk-medium-fg); }
+.tier-badge.tier-monitor { background: var(--info-bg); border-color: var(--info-border); color: var(--info-fg); }
+.tier-badge.tier-record { background: var(--surface-muted); border-color: var(--border-strong); color: var(--text-secondary); }
+
+/* -------------------------------------------------------------- annotations */
+.annotation-panel {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end;
+  padding: 12px 14px; margin: 6px 0;
+  background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-lg);
+}
+.annotation-panel label {
+  display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary);
+}
+.annotation-panel select, .annotation-panel input {
+  padding: 6px 8px; border: 1px solid var(--border-strong); border-radius: var(--radius);
+  font-size: 13px; background: var(--surface); min-width: 140px;
+}
+.annotation-panel .annotation-note { flex: 1 1 260px; }
+.annotation-panel .annotation-note input { width: 100%; min-width: 0; }
+
+.annotation-badge {
+  display: inline-block; padding: 1px 7px; border-radius: var(--radius-pill);
+  font-size: 12px; border: 1px solid transparent; white-space: nowrap;
+}
+.annotation-badge.state-open { background: var(--risk-medium-bg); border-color: var(--risk-medium-border); color: var(--risk-medium-fg); }
+.annotation-badge.state-acknowledged { background: var(--risk-low-bg); border-color: var(--risk-low-border); color: var(--risk-low-fg); }
+.annotation-badge.state-accepted { background: var(--accent-soft); border-color: var(--accent-soft-border); color: var(--accent-deep); }
+/* Reads as a warning, not as a third state: the decision on record has stopped
+   covering the risk, which needs someone to look again. */
+.annotation-stale {
+  display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: var(--radius-pill);
+  font-size: 11px; background: var(--risk-critical-bg); border: 1px solid var(--risk-critical-border); color: var(--risk-critical-fg);
+  white-space: nowrap;
+}
+
+.annotation-history { margin: 4px 0 0; }
+.annotation-history-row {
+  display: flex; gap: 10px; padding: 3px 0; font-size: 12px; color: var(--text-secondary);
+  border-top: 1px solid var(--surface-muted);
+}
+.annotation-history-row span:first-child { flex: 0 0 130px; }
+
+/* ---------------------------------------------------------- loading skeleton */
+.skeleton-table { display: grid; gap: 6px; margin-bottom: 12px; }
+.skeleton-row {
+  height: 34px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--border) 25%, var(--border) 37%, var(--border) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+.skeleton-row.head { height: 38px; background: var(--border); animation: none; }
+@keyframes skeleton-sweep {
+  from { background-position: 100% 50%; }
+  to { background-position: 0 50%; }
+}
+/* Respect a stated preference against motion: a sweeping gradient is
+   decoration, and the skeleton still communicates without it. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-row { animation: none; }
+}
+
+/* ----------------------------------------------------------------- tabs */
+.tab-strip { display: flex; gap: 4px; border-bottom: 2px solid var(--border); margin-bottom: 14px; }
+.tab {
+  padding: 9px 16px; background: transparent; border: 0;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  color: var(--text-muted); font-size: 14px; cursor: pointer;
+}
+.tab:hover { color: var(--accent-strong); }
+.tab.active { color: var(--accent-strong); border-bottom-color: var(--accent-strong); font-weight: 600; }
+
+/* --------------------------------------------------------- contract table */
+.contract-group { margin-bottom: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.contract-group > summary {
+  padding: 10px 14px; cursor: pointer; font-weight: 600;
+  background: var(--surface-subtle); border-radius: var(--radius-lg);
+}
+.contract-group[open] > summary { border-bottom: 1px solid var(--border); border-radius: var(--radius-lg) 8px 0 0; }
+.contract-table tbody tr:hover { background: var(--surface-muted); }
+.link-button {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--accent-strong); text-decoration: underline; font-size: 13px; text-align: left;
+}
+.link-button:hover { color: var(--accent-deep); }
+.small-button { padding: 4px 10px; font-size: 12px; }
+
+.overview-card {
+  border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 14px; margin-bottom: 16px; background: var(--surface);
+}
+.overview-card h3 { margin: 0 0 10px; font-size: 15px; }
+
+/* -------------------------------------------------------- detail modal */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, .55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 60;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal-card {
+  background: var(--surface); border-radius: var(--radius-lg); padding: 20px;
+  max-width: 720px; width: 100%; max-height: 86vh; overflow-y: auto;
+}
+.modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.modal-head h3 { margin: 0; font-size: 17px; word-break: break-all; }
+.modal-foot { margin-top: 16px; display: flex; justify-content: flex-end; }
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin: 16px 0;
+}
+.detail-field { display: flex; flex-direction: column; gap: 2px; }
+
+.placeholder-card {
+  border: 1px dashed var(--border-strong); border-radius: var(--radius-lg);
+  padding: 20px; background: var(--surface-subtle);
+}
+
+@media (max-width: 860px) {
+  .shell { flex-direction: column; }
+  .sidenav {
+    flex: 1 1 auto; width: 100%; min-height: 0; position: static;
+    border-right: 0; border-bottom: 1px solid var(--border);
+    display: flex; gap: 16px; flex-wrap: wrap; padding: 12px;
+  }
+  .nav-group { margin-bottom: 0; }
+}
+
+/* --------------------------------- contract table density and view settings */
+.column-toggle { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; margin-right: 14px; }
+.density-compact .contract-table td, .density-compact .contract-table th { padding: 4px 8px; font-size: 12px; }
+.density-standard .contract-table td, .density-standard .contract-table th { padding: 8px 10px; }
+.density-roomy .contract-table td, .density-roomy .contract-table th { padding: 14px 12px; }
+[data-density].active { background: var(--accent-strong); color: var(--accent-contrast); border-color: var(--accent-strong); }
+
+.detail-subhead { margin: 18px 0 8px; font-size: 14px; }
+.finding-list { display: flex; flex-direction: column; gap: 8px; }
+.finding-row {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-subtle);
+}
+.finding-row .contract-severity { flex: 0 0 auto; }
+
+/* Evaluation age beside the risk badge. A score without a date invites acting
+   on a stale conclusion, so old results are marked, not just dated. */
+.risk-age { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.risk-age-stale { color: var(--risk-high-fg); font-weight: 600; }
+
+/* ------------------------------------------------- contract chat split view */
+.chat-split { display: grid; gap: 16px; align-items: start; }
+.chat-split.layout-wide-list  { grid-template-columns: 2fr 1fr; }
+.chat-split.layout-balanced   { grid-template-columns: 1fr 1fr; }
+.chat-split.layout-wide-chat  { grid-template-columns: 1fr 2fr; }
+.chat-split.layout-stacked    { grid-template-columns: 1fr; }
+.chat-pane {
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; background: var(--surface); min-width: 0;
+}
+.chat-pane h4 { margin: 0 0 10px; font-size: 14px; }
+.chat-contract-list { max-height: 420px; overflow-y: auto; }
+.chat-contract-item {
+  display: flex; gap: 8px; align-items: center;
+  padding: 6px 8px; border-radius: var(--radius); font-size: 13px; cursor: pointer;
+}
+.chat-contract-item:hover { background: var(--surface-muted); }
+.chat-composer { display: flex; gap: 8px; margin-top: 12px; }
+.chat-composer textarea {
+  flex: 1 1 auto; padding: 8px; border: 1px solid var(--border-strong); border-radius: var(--radius);
+  font-family: inherit; font-size: 13px; resize: vertical;
+}
+[data-chat-layout].active { background: var(--accent-strong); color: var(--accent-contrast); border-color: var(--accent-strong); }
+
+.sort-header {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-weight: 600; color: inherit; text-align: left;
+}
+.sort-header:hover { color: var(--accent-strong); }
+
+/* Category cell: many projects carry several category paths, which used to
+   wrap and inflate the row height, pushing status and risk out of view. */
+.category-cell { max-width: 260px; }
+.category-more {
+  background: none; border: 0; padding: 0 0 0 4px; cursor: pointer;
+  color: var(--accent-strong); font-size: 12px;
+}
+
+/* Environment banner. Test-looking project names ("好吧", "xz") read as a
+   broken system unless the page says which database it is connected to. */
+.env-banner {
+  padding: 6px 14px; font-size: 12px; text-align: center;
+  background: var(--risk-medium-bg); color: var(--risk-medium-fg); border-bottom: 1px solid var(--risk-medium-border);
+}
+
+/* Contract table sizing. It must NOT reuse .project-table, whose fixed
+   per-column pixel widths follow the project column order; borrowing them gave
+   合同名称 the 52px checkbox width and made it collide with 合同编号. */
+.contract-table { width: 100%; min-width: 900px; table-layout: auto; }
+.contract-table th, .contract-table td { vertical-align: middle; }
+/* Keyed to the COLUMN, never to its position. This block used to use
+   :nth-child, which silently addresses the wrong column as soon as the user
+   hides one - and hiding columns is a feature of this table. Adding 处理状态
+   and 责任人 would have shifted it again. A class cannot drift. */
+.contract-table .col-name { min-width: 180px; max-width: 320px; }
+.contract-table td.col-name { word-break: break-word; }
+/* Codes, amounts and dates must never wrap or overlap their neighbour. */
+.contract-table .col-ref { white-space: nowrap; }
+.contract-table .col-amount { white-space: nowrap; text-align: right; }
+.contract-table .col-end { white-space: nowrap; }
+.contract-table .col-state, .contract-table .col-owner { white-space: nowrap; }
+.contract-table .col-action { white-space: nowrap; text-align: right; }
+.contract-table .link-button { display: inline-block; max-width: 300px; word-break: break-word; }
+
+/* The contract chat log reuses the project chat's .chat-message markup, so it
+   needs only a container. Duplicating bubble styles here would let the two
+   conversations drift apart visually, which is what unification avoids. */
+.chat-log { min-height: 220px; max-height: 440px; overflow-y: auto; }
+
+/* ------------------------------------------------------- numeric alignment
+ * Scores, amounts, dates and counts are compared down a column across 65
+ * rows. In a proportional face the digits are different widths, so 1,536,000
+ * and 860,000 do not line up and the reader cannot tell which is larger
+ * without reading both. Tabular figures fix the alignment; the mono family
+ * fixes the glyph width for the columns that are pure data. */
+.contract-table .col-amount,
+.contract-table .col-ref,
+.contract-table .col-end,
+.metric strong,
+.tier-strip strong,
+td.numeric, th.numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+.contract-table .col-amount,
+.contract-table .col-end {
+  font-family: var(--font-numeric);
+  font-size: 12.5px;
+  letter-spacing: -0.01em;
+}
+/* The score inside a risk badge is a number too, and it sits next to a label,
+   so only the digits get the treatment. */
+.badge, .contract-severity { font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------------------- density: cockpit
+ * VISUAL_DENSITY 8. Tighter rows, thinner rules, no card boxes around data.
+ * The default 9px row padding was tuned for a 25-row page; this table shows
+ * 65 and the operator scans it top to bottom. */
+.contract-table th, .contract-table td { padding: 6px 8px; }
+.contract-table tbody tr { border-bottom: 1px solid var(--border-subtle); }
+
+/* --------------------------------------------------- motion and reduced motion
+ * Every animation in this app has to justify itself. The two that survive are
+ * the chat typewriter (it communicates that a reply is arriving, and the
+ * project chat has always had it) and the loading skeleton (it communicates
+ * shape while a 12-second query runs). Both are suppressed below.
+ *
+ * This is an accessibility requirement, not a preference: motion can trigger
+ * vestibular symptoms, and the typewriter previously had no escape hatch. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .skeleton-row, .skeleton-cell { animation: none !important; background: var(--surface-muted); }
+}
+
+/* ------------------------------------------------------- tactile feedback
+ * A button that does not move when pressed reads as unresponsive on a slow
+ * query, and several actions here take seconds. */
+button:not(:disabled):active { transform: translateY(1px); }
+button:not(:disabled) { transition: transform .06s ease-out, background-color .12s ease-out; }
+
+/* ------------------------------------------------------------- empty states
+ * "No data" as a bare grey line reads as a broken page. An empty state says
+ * what is missing and what to do about it. */
+.empty-state {
+  display: grid; gap: 6px; justify-items: center; text-align: center;
+  padding: 28px 16px; border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg); background: var(--surface-subtle);
+  color: var(--text-muted); font-size: 13px;
+}
+.empty-state strong { color: var(--text); font-size: 14px; font-weight: 600; }
+.empty-state .empty-action { margin-top: 4px; }
+
+/* --------------------------------------------------------------- error state
+ * Inline and specific, next to the thing that failed, rather than a toast
+ * that disappears before it can be read. */
+.inline-error {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 11px; border: 1px solid var(--risk-critical-border);
+  border-radius: var(--radius); background: var(--risk-critical-wash);
+  color: var(--risk-critical-fg); font-size: 12.5px; line-height: 1.5;
+}
+
+/* The theme control sits in the header beside the password field. Sized to
+   fit its longest label (跟随系统) so cycling does not reflow the header. */
+.theme-toggle { min-width: 96px; font-size: 12.5px; padding: 0 10px; }
+
+/* ------------------------------------------------------------ metric strip
+ * Collapsed state for the metric row. Six cards cost ~90px above a table the
+ * operator came here to read, and after the first glance they are reference
+ * numbers. Collapsed shows the same numbers on one line, so nothing is
+ * hidden; expanded restores the cards. */
+.metrics.metrics-collapsed { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.metric-strip { display: flex; align-items: baseline; gap: 4px 18px; flex-wrap: wrap; flex: 1 1 auto; }
+.metric-strip-item { display: inline-flex; align-items: baseline; gap: 5px; font-size: 13px; white-space: nowrap; }
+.metric-strip-item strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.metric-strip-toggle { flex: 0 0 auto; font-size: 12px; }
+.metrics:not(.metrics-collapsed) .metric-strip-toggle { grid-column: 1 / -1; justify-self: start; margin-top: 2px; }
+
+/* ----------------------------------------------------- chat list selection */
+.chat-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.chat-list-head h4 { margin: 0; }
+.chat-list-actions { display: flex; align-items: center; gap: 10px; }
+.chat-select-all { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer; }
+.chat-select-all input { margin: 0; }
+/* The over-cap warning has to read as a warning: past 20 contracts the
+   request silently drops the rest, and a grey hint would be missed. */
+.warn-text { color: var(--risk-critical-fg); }

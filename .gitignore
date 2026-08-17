@@ -1,0 +1,20 @@
+.env
+# Any .env variant (.env.local, .env.bak, timestamped copies). A bare ".env"
+# rule does not cover these, so a backup or scratch copy of a real file would
+# otherwise show up as an untracked, committable secret.
+.env.*
+!.env.example
+.venv/
+.idea/
+*.iml
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.egg-info/
+data/
+.DS_Store
+Thumbs.db

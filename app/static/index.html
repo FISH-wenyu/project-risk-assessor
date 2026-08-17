@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>项目风险评估 Agent</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script>
+    // Runs before the stylesheet paints anything, on purpose. Reading the
+    // saved theme from app.js at the end of <body> would render one frame in
+    // the system theme first, so a user who chose dark sees a white flash on
+    // every load. Deliberately tiny and inline for that reason.
+    try {
+      var saved = localStorage.getItem("riskAgentTheme");
+      if (saved === "dark" || saved === "light") {
+        document.documentElement.setAttribute("data-theme", saved);
+      }
+    } catch (e) { /* private mode: fall back to the system theme */ }
+  </script>
+</head>
+<body>
+@@ENV_BANNER@@
+  <header>
+    <h1>项目风险评估 Agent</h1>
+    <div class="auth">
+      <button id="themeToggle" class="ghost theme-toggle" type="button"
+              aria-label="切换配色" title="跟随系统 / 浅色 / 深色"></button>
+      <input id="passwordInput" type="password" placeholder="Agent 口令" />
+      <button id="savePasswordButton" class="secondary" onclick="savePassword()">保存口令</button>
+    </div>
+  </header>
+  <div class="shell">
+  <aside class="sidenav" aria-label="主导航">
+    <div class="nav-group">
+      <div class="nav-group-title">项目风险评估</div>
+      <button class="nav-item active" data-view="viewProjects" type="button">项目风险列表</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-title">合同风险评估</div>
+      <button class="nav-item" data-view="viewContractLedger" type="button">合同风险台账</button>
+      <button class="nav-item" data-view="viewContractChat" type="button">合同智能对话</button>
+    </div>
+  </aside>
+  <main>
+    <section id="viewProjects" class="app-view">
+    <div class="metrics">
+      <div class="metric"><span>项目总数</span><strong id="metricProjects">-</strong></div>
+      <div class="metric"><span>已评估项目</span><strong id="metricEvaluated">-</strong></div>
+      <div class="metric"><span>严重风险</span><strong id="metricSevere">-</strong></div>
+      <div class="metric"><span>高风险</span><strong id="metricHigh">-</strong></div>
+      <div class="metric"><span>平均分</span><strong id="metricAverage">-</strong></div>
+      <div class="metric"><span>LLM</span><strong id="metricLlm">-</strong></div>
+    </div>
+    <!-- Rule changes altered what a score means, so stored scores from
+         different versions are not comparable — and the metrics above average
+         them together. Hidden entirely when every project is current. -->
+    <div id="staleRuleBanner" class="stale-banner hidden">
+      <div>
+        <strong id="staleRuleHeadline"></strong>
+        <span id="staleRuleDetail" class="small"></span>
+      </div>
+      <div class="stale-banner-actions">
+        <button id="staleRuleReevaluate" type="button">重新评估这些项目</button>
+        <button id="staleRuleDismiss" class="ghost" type="button">本次隐藏</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input id="search" placeholder="项目名称搜索" onkeydown="if(event.key==='Enter') reloadProjects()" />
+      <select id="statusFilter"><option value="">全部状态</option><option>未开始</option><option>进行中</option><option>终止</option><option>已完成</option></select>
+      <select id="approvalFilter"><option value="">全部审核</option><option>未审核</option><option>审核中</option><option>审核通过</option><option>审核打回</option></select>
+      <input id="categorySearch" placeholder="搜索分类" />
+      <select id="categoryFilter"><option value="">全部分类</option></select>
+      <select id="riskFilter"><option value="">全部风险</option><option>低</option><option>中</option><option>高</option><option>严重</option></select>
+      <select id="pageSize"><option>25</option><option>50</option><option>100</option></select>
+      <button id="queryButton" onclick="reloadProjects()">查询</button>
+      <button id="resetButton" class="ghost" onclick="resetFilters()">重置</button>
+    </div>
+    <div class="main-chat-launch">
+      <button id="startMainChatButton" type="button" onclick="openMainChatFloat()">开始对话</button>
+    </div>
+    <div id="mainChatFloatPanel" class="main-chat-float hidden" aria-label="首页 LLM 风险对话">
+      <div id="mainChatFloatHeader" class="main-chat-float-header">
+        <span class="main-chat-float-title">LLM 风险对话</span>
+        <div class="main-chat-float-actions">
+          <button id="minimizeMainChatButton" class="ghost" type="button">_</button>
+          <button id="closeMainChatButton" class="ghost" type="button">×</button>
+        </div>
+      </div>
+      <div class="main-chat-float-body">
+        <div id="mainChatMessages" class="chat-log main-chat-log" role="log" aria-live="polite"></div>
+        <div id="mainChatControls" class="main-chat-layout">
+          <input id="mainChatProjectSearch" placeholder="搜索对话项目" />
+          <select id="mainChatProjectSelect" aria-label="选择项目对话"></select>
+          <select id="mainChatSessionSelect" aria-label="选择项目风险对话"></select>
+          <button id="mainNewChatButton" class="secondary" type="button">新对话</button>
+        </div>
+        <div id="mainChatMemoryStatus" class="small muted"></div>
+        <div id="mainChatError" class="chat-error hidden" role="alert"></div>
+        <form id="mainChatForm" class="chat-form main-chat-form">
+          <div id="mainChatInputRow" class="main-chat-input-row">
+            <textarea id="mainChatInput" maxlength="4000" placeholder="向 LLM 询问所选项目风险" aria-label="主页面风险对话内容"></textarea>
+            <div id="mainChatInputActions" class="main-chat-input-actions">
+              <label class="chat-remember small"><input id="mainChatRemember" type="checkbox" /> 记住</label>
+              <button id="mainChatSendButton" type="button">发送</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <button id="mainChatResizeHandle" class="main-chat-resize-handle" type="button" aria-label="调整对话框大小"></button>
+    </div>
+    <div class="layoutbar" aria-label="首页模块布局">
+      <div class="layoutbar-group">
+        <span class="small muted">布局</span>
+        <button id="layoutPresetWideTable" class="secondary" type="button" onclick="applyLayoutPreset('wide-table')">宽表优先</button>
+        <button id="layoutPresetBalanced" class="secondary" type="button" onclick="applyLayoutPreset('balanced')">均衡</button>
+        <button id="layoutPresetStacked" class="secondary" type="button" onclick="applyLayoutPreset('stacked')">上下布局</button>
+      </div>
+      <div class="layoutbar-group">
+        <button id="viewSettingsToggle" class="ghost" type="button" onclick="toggleViewSettings()">视图设置</button>
+        <button id="layoutResetButton" class="ghost" type="button" onclick="resetDashboardLayout()">重置布局</button>
+      </div>
+    </div>
+    <div id="viewSettingsPanel" class="view-settings-panel hidden" aria-label="视图设置">
+      <label class="view-setting small">
+        <span><strong>项目列表宽度</strong><output id="layoutWidthValue">80%</output></span>
+        <input id="layoutWidthSlider" type="range" min="55" max="90" step="1" value="80" oninput="setLayoutWidthFromSlider(this.value)" />
+      </label>
+      <label class="view-setting small">
+        <span><strong>表格缩放</strong><output id="tableZoomSliderValue">85%</output></span>
+        <input id="tableZoomSlider" type="range" min="50" max="140" step="5" value="85" oninput="setTableZoomFromSlider(this.value)" />
+      </label>
+      <div class="view-settings-actions">
+        <button id="fitTableButton" class="secondary" type="button" onclick="fitProjectTable()">适合表格</button>
+      </div>
+      <label class="small"><input id="compactTableToggle" type="checkbox" onchange="toggleCompactTable(this.checked)" /> 紧凑表格</label>
+    </div>
+    <div id="dashboardGrid" class="grid">
+      <section id="projectListSection">
+        <div class="section-head">
+          <h2>项目列表</h2>
+          <button id="schemaButton" class="secondary" onclick="suggestSchema()">识别字段映射</button>
+        </div>
+        <div id="projectStatus" class="status-line"></div>
+        <div class="bulkbar">
+          <div class="bulk-actions">
+            <label class="small"><input id="selectPageCheckbox" type="checkbox" onchange="toggleCurrentPageSelection(this.checked)" /> 全选当前页</label>
+            <button id="selectFilteredButton" class="secondary" onclick="selectFilteredProjects()">全选当前筛选结果</button>
+            <button id="clearSelectionButton" class="ghost" onclick="clearSelection()">清空选择</button>
+          </div>
+          <div class="bulk-actions">
+            <span id="selectionSummary" class="small muted">已选择 0 个项目</span>
+            <button id="batchEvaluateButton" onclick="evaluateSelectedProjects()" disabled>评估所选项目</button>
+          </div>
+        </div>
+        <div id="batchPanel" class="batch-panel hidden">
+          <div class="progress-head"><span id="batchMessage">批量评估已加入队列</span><span id="batchCount">0 / 0</span></div>
+          <div class="progress-bar"><div id="batchProgressFill" class="progress-fill"></div></div>
+          <button id="cancelBatchButton" class="ghost" type="button" onclick="cancelActiveBatch()">取消批量评估</button>
+          <button id="dismissBatchButton" class="ghost hidden" type="button" onclick="dismissBatchPanel()">清除</button>
+          <div id="batchItems" class="batch-items"></div>
+        </div>
+        <div class="table-tools">
+          <div class="table-tools-group">
+            <button id="tableZoomOutButton" class="ghost" type="button" onclick="changeTableZoom(-0.1)">-</button>
+            <span id="tableZoomValue" class="small muted">100%</span>
+            <button id="tableZoomInButton" class="ghost" type="button" onclick="changeTableZoom(0.1)">+</button>
+            <button id="tableZoomResetButton" class="ghost" type="button" onclick="resetTableView()">重置</button>
+          </div>
+          <label class="small"><input id="tablePanToggle" type="checkbox" onchange="toggleTablePan(this.checked)" /> 移动</label>
+        </div>
+        <div id="projectLoadingSkeleton" class="skeleton-table hidden" aria-hidden="true"></div>
+        <div id="projectTableViewport" class="table-wrap" onpointerdown="handleTablePanPointerDown(event)">
+          <div id="projectTableSurface" class="table-surface">
+          <table id="projectTable" class="project-table">
+            <thead><tr><th><span class="small">选择</span></th><th>编号</th><th>项目名称</th><th>分类</th><th>状态</th><th>审核</th><th>最近风险</th><th>操作</th></tr></thead>
+            <tbody id="projectRows"></tbody>
+          </table>
+          </div>
+        </div>
+        <div class="pager">
+          <button class="ghost" id="prevPage" onclick="changePage(-1)">上一页</button>
+          <span id="pageText" class="small muted">第 1 页</span>
+          <button class="ghost" id="nextPage" onclick="changePage(1)">下一页</button>
+        </div>
+      </section>
+      <div id="layoutSplitter" class="layout-splitter" role="separator" aria-orientation="vertical" aria-label="调整项目列表和风险详情宽度"></div>
+      <section id="riskDetailSection">
+        <h2>风险详情</h2>
+        <div id="riskSummary" class="detail-summary muted">请选择项目并点击评估。</div>
+        <div id="progressPanel" class="progress-panel hidden">
+          <div class="progress-head"><span id="progressMessage">已加入评估队列</span><span id="progressElapsed">0s</span></div>
+          <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+          <button id="cancelJobButton" class="ghost" type="button" onclick="cancelActiveJob()">取消评估</button>
+        </div>
+        <div id="dimensionGrid" class="dimension-grid"></div>
+        <h3>命中规则</h3>
+        <ul id="hitList" class="list"></ul>
+        <h3>建议动作</h3>
+        <ul id="suggestionList" class="list"></ul>
+        <h3>评估历史</h3>
+        <ul id="historyList" class="list"></ul>
+        <pre id="riskJson"></pre>
+      </section>
+    </div>
+    </section>
+
+
+    <section id="viewContractLedger" class="app-view" hidden>
+      <nav class="breadcrumb" id="contractBreadcrumb" aria-label="面包屑"></nav>
+      <div class="view-head">
+        <h2 id="contractViewTitle">合同风险台账</h2>
+        <div class="view-actions">
+          <button id="contractExportButton" class="secondary" type="button">导出 CSV</button>
+          <button id="contractReloadButton" type="button">加载数据</button>
+        </div>
+      </div>
+
+      <!-- Collapsed by default: eight always-visible controls above a table is
+           a lot of chrome for a screen whose job is the table. The summary
+           states the active filter whether open or closed, and the panel
+           force-opens when a filter is already applied on load, so a hidden
+           filter can never silently narrow what you are reading. -->
+      <details class="filter-panel" id="contractFilterPanel">
+        <summary>
+          <span class="filter-summary-label">筛选</span>
+          <span id="contractFilterSummary" class="filter-summary-value">全部合同</span>
+        </summary>
+      <div class="filter-bar" id="contractFilterBar">
+        <label>风险等级
+          <select id="filterRiskLevel">
+            <option value="">全部</option>
+            <option value="严重">严重</option>
+            <option value="高">高</option>
+            <option value="中">中</option>
+            <option value="低">低</option>
+          </select>
+        </label>
+        <label>执行状态
+          <select id="filterExecutionStatus">
+            <option value="">全部</option>
+            <option value="未开始">未开始</option>
+            <option value="进行中">进行中</option>
+            <option value="暂停">暂停</option>
+            <option value="草稿">草稿</option>
+            <option value="已完成">已完成</option>
+            <option value="终止">终止</option>
+          </select>
+        </label>
+        <label>审核状态
+          <select id="filterApprovalStatus">
+            <option value="">全部</option>
+            <option value="待审核">待审核</option>
+            <option value="审核中">审核中</option>
+            <option value="审核通过">审核通过</option>
+            <option value="审核驳回">审核驳回</option>
+          </select>
+        </label>
+        <label>所属组织
+          <select id="filterOrg"><option value="">全部</option></select>
+        </label>
+        <label>关联项目
+          <select id="filterLink">
+            <option value="">全部</option>
+            <option value="project_linked">有关联项目</option>
+            <option value="standalone">无项目关联</option>
+            <option value="orphaned">孤儿合同</option>
+          </select>
+        </label>
+        <label>到期日自
+          <input id="filterEndFrom" type="date" />
+        </label>
+        <label>至
+          <input id="filterEndTo" type="date" />
+        </label>
+        <!-- The filter that turns a report into a worklist: without it the
+             same 18 立即处理 rows reappear on every load whether or not
+             anyone has already dealt with them. -->
+        <label>处理状态
+          <select id="filterAnnotation">
+            <option value="">全部</option>
+            <option value="open">待处理</option>
+            <option value="acknowledged">已确认</option>
+            <option value="accepted">已接受风险</option>
+            <option value="stale">确认已失效</option>
+            <option value="unassigned">未指派</option>
+          </select>
+        </label>
+        <label>责任人
+          <select id="filterOwner"><option value="">全部</option></select>
+        </label>
+        <label class="filter-search">搜索
+          <input id="filterSearch" type="search" placeholder="合同名称或编号" />
+        </label>
+        <button id="filterResetButton" class="secondary" type="button">重置</button>
+      </div>
+      <!-- The URL already carries the filter, so a view can be shared. What it
+           cannot do is be remembered: nobody retypes eight controls to get back
+           to "my organisation's overdue contracts". -->
+      <div class="saved-views">
+        <span class="small muted">常用视图</span>
+        <div id="savedViewList" class="saved-view-list"></div>
+        <input id="savedViewName" type="text" maxlength="40" placeholder="为当前筛选起个名字" />
+        <button id="savedViewSave" class="secondary" type="button">保存当前筛选</button>
+      </div>
+      </details>
+
+      <!-- Named "表格设置", not "视图设置": the project page's control of that
+           name resizes its list/detail split, while this one sets row density
+           and which columns show. One name for two behaviours sets the wrong
+           expectation about what the buttons will do. -->
+      <div class="layoutbar" aria-label="合同台账表格设置">
+        <div class="layoutbar-group">
+          <span class="small muted">表格设置</span>
+          <button class="secondary" type="button" data-density="compact">紧凑</button>
+          <button class="secondary" type="button" data-density="standard">标准</button>
+          <button class="secondary" type="button" data-density="roomy">宽松</button>
+        </div>
+        <div class="layoutbar-group">
+          <button id="contractViewSettingsToggle" class="ghost" type="button">显示列</button>
+          <button id="contractViewReset" class="ghost" type="button">重置表格</button>
+        </div>
+      </div>
+      <div id="contractViewSettings" class="view-settings-panel hidden" aria-label="列显示设置"></div>
+
+      <div class="tab-strip" role="tablist">
+        <button class="tab active" data-tab="tiered" role="tab" type="button">分层视图</button>
+        <button class="tab" data-tab="org" role="tab" type="button">组织聚合</button>
+        <button class="tab" data-tab="overview" role="tab" type="button">合同风险总览</button>
+      </div>
+
+      <div class="main-chat-launch">
+        <button id="ledgerStartChatButton" type="button">开始对话</button>
+      </div>
+      <p id="contractScopeBanner" class="contract-scope-note"></p>
+      <div id="contractLoadError" class="inline-error hidden" role="alert"></div>
+      <p id="contractDateFilterNote" class="contract-scope-note warn hidden"></p>
+      <div id="contractMetrics" class="metrics" aria-live="polite"></div>
+      <!-- The ledger reads every active contract from a remote database and
+           takes around twelve seconds. A single line of "加载中…" over that
+           long reads as a hung page, so show the shape of what is coming and
+           a running count of seconds. -->
+      <div id="contractLoadingSkeleton" class="skeleton-table hidden" aria-hidden="true"></div>
+      <div id="contractTableHost"></div>
+      <div id="contractEmptyHint" class="empty-state hidden">
+        <strong id="contractEmptyTitle">没有符合条件的合同</strong>
+        <span id="contractEmptyBody"></span>
+        <span class="empty-action"><button id="contractEmptyReset" class="secondary" type="button">清除筛选</button></span>
+      </div>
+    </section>
+
+    <section id="viewContractChat" class="app-view" hidden>
+      <nav class="breadcrumb" aria-label="面包屑">合同风险评估 &rsaquo; 合同智能对话</nav>
+      <div class="view-head">
+        <h2>合同智能对话</h2>
+        <div class="view-actions">
+          <button id="chatSelectFiltered" class="secondary" type="button">选中当前筛选结果</button>
+          <button id="chatClearSelection" class="secondary" type="button">清空选择</button>
+        </div>
+      </div>
+
+      <div id="chatMetrics" class="metrics" aria-live="polite"></div>
+
+      <div class="layoutbar" aria-label="合同对话布局">
+        <div class="layoutbar-group">
+          <span class="small muted">布局</span>
+          <button class="secondary" type="button" data-chat-layout="wide-list">宽列表</button>
+          <button class="secondary" type="button" data-chat-layout="balanced">均衡</button>
+          <button class="secondary" type="button" data-chat-layout="wide-chat">宽对话</button>
+          <button class="secondary" type="button" data-chat-layout="stacked">上下布局</button>
+        </div>
+        <div class="layoutbar-group">
+          <button id="chatLayoutReset" class="ghost" type="button">重置布局</button>
+        </div>
+      </div>
+
+      <div id="chatSplit" class="chat-split">
+        <section class="chat-pane">
+          <div class="chat-list-head">
+            <h4>合同列表（可多选）</h4>
+            <div class="chat-list-actions">
+              <label class="chat-select-all">
+                <input id="chatSelectAll" type="checkbox" />
+                <span id="chatSelectAllLabel">全选</span>
+              </label>
+              <button id="chatClearSelection" class="link" type="button">清空</button>
+            </div>
+          </div>
+          <p id="chatSelectionHint" class="muted small"></p>
+          <div id="chatContractList" class="contract-list chat-contract-list"></div>
+        </section>
+        <section class="chat-pane">
+          <h4>对话</h4>
+          <div id="contractChatLog" class="chat-log" aria-live="polite"></div>
+          <p id="contractChatSignals" class="contract-scope-note hidden"></p>
+          <div class="chat-composer">
+            <textarea id="chatContractInput" rows="3" placeholder="例如：这些合同中有哪些潜在违约风险？"></textarea>
+            <button id="chatContractSend" type="button">发送</button>
+          </div>
+          <p class="muted small">
+            回答基于规则命中与检索到的条款片段。风险等级始终由规则引擎决定，模型不参与评分。
+            回答中的合同编号与条款引用会与实际发送的数据逐一核对。
+          </p>
+        </section>
+      </div>
+    </section>
+  </main>
+  </div>
+  <div id="riskModal" class="modal-backdrop hidden" onclick="if(event.target.id==='riskModal') closeRiskModal()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="riskModalTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="riskModalTitle">项目风险详情</h2>
+          <div id="riskModalSubtitle" class="small muted"></div>
+        </div>
+        <button class="ghost" onclick="closeRiskModal()">关闭</button>
+      </div>
+      <div class="modal-body">
+        <div id="riskModalEmpty" class="detail-summary hidden"></div>
+        <details id="chatPanel" class="chat-panel">
+          <summary>风险对话</summary>
+          <div class="chat-body">
+            <div class="chat-toolbar">
+              <select id="chatSessionSelect" aria-label="选择风险对话"></select>
+              <button id="newChatButton" class="secondary" type="button">新对话</button>
+            </div>
+            <div id="chatMemoryStatus" class="small muted"></div>
+            <div id="chatError" class="chat-error hidden" role="alert"></div>
+            <div id="chatMessages" class="chat-log" role="log" aria-live="polite"></div>
+            <form id="chatForm" class="chat-form">
+              <label class="chat-remember small">
+                <input id="chatRemember" type="checkbox" />
+                记住这条信息
+              </label>
+              <textarea id="chatInput" maxlength="4000" placeholder="向 LLM 询问该项目风险、原因或整改建议" aria-label="风险对话内容"></textarea>
+              <button id="chatSendButton" type="submit">发送</button>
+            </form>
+          </div>
+        </details>
+        <section id="contractDiscoveryPanel" class="contract-discovery-panel">
+          <div class="section-head">
+            <h3>合同资产</h3>
+            <div class="contract-action-row">
+              <button id="refreshContractAssetsButton" class="secondary" type="button">刷新资产</button>
+              <button id="createAttachmentAuthorizationDraftsButton" class="secondary" type="button">生成授权草稿</button>
+              <button id="createContractAnalysisJobButton" type="button">创建分析任务</button>
+              <button id="discoverContractsButton" class="secondary hidden" type="button">只读发现</button>
+            </div>
+          </div>
+          <p id="contractDiscoveryStatus" class="muted small">尚未刷新合同资产</p>
+          <div id="contractAssetStatus" class="contract-status-strip" aria-live="polite"></div>
+          <div id="contractAuthorizationStatus" class="contract-status-strip" aria-live="polite"></div>
+          <div id="contractAnalysisStatus" class="contract-status-strip" aria-live="polite"></div>
+          <p id="contractRiskSummary" class="muted small"></p>
+          <p id="contractScopeNote" class="contract-scope-note hidden"></p>
+          <div id="contractFindings" class="contract-findings" aria-live="polite"></div>
+          <div class="contract-discovery-grid">
+            <div>
+              <h4>合同元数据</h4>
+              <div id="contractList" class="contract-list"></div>
+            </div>
+            <div>
+              <h4>附件候选</h4>
+              <div id="contractAttachmentList" class="contract-list"></div>
+            </div>
+          </div>
+        </section>
+        <div id="riskModalContent">
+          <div class="modal-summary">
+            <div class="modal-stat"><span>最新等级</span><strong id="modalRiskLevel">-</strong></div>
+            <div class="modal-stat"><span>综合分</span><strong id="modalRiskScore">-</strong></div>
+            <div class="modal-stat"><span>命中规则</span><strong id="modalHitCount">-</strong></div>
+            <div class="modal-stat"><span>最近评估</span><strong id="modalEvaluatedAt">-</strong></div>
+          </div>
+          <div id="modalExplanation" class="detail-summary"></div>
+          <div class="chart-grid">
+            <div class="chart"><h3>维度得分</h3><div id="modalDimensionChart"></div></div>
+            <div class="chart"><h3>命中分布</h3><div id="modalHitChart"></div></div>
+          </div>
+          <div class="chart"><h3>历史评分趋势</h3><div id="modalHistoryChart" class="history-trend"></div></div>
+          <h3>建议动作</h3>
+          <ul id="modalSuggestionList" class="list"></ul>
+          <h3>最近评估历史</h3>
+          <ul id="modalHistoryList" class="list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="contractDetailModal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="contractDetailTitle">
+      <div class="modal-head">
+        <h3 id="contractDetailTitle"></h3>
+        <button id="contractDetailClose" class="secondary" type="button">关闭</button>
+      </div>
+      <div id="contractDetailGrid" class="detail-grid"></div>
+      <p id="contractDetailReason" class="contract-scope-note"></p>
+      <h4 class="detail-subhead">命中规则</h4>
+      <div id="contractDetailFindings" class="finding-list"></div>
+
+      <!-- Acknowledgement and owner are LOCAL records about a source row. The
+           source database is read-only and has no field for either, so the
+           panel says so rather than letting anyone believe this writes back. -->
+      <h4 class="detail-subhead">处理状态<span class="muted small">（仅记录在本地，不回写源系统）</span></h4>
+      <div class="annotation-panel">
+        <label>状态
+          <select id="annotationState">
+            <option value="open">待处理</option>
+            <option value="acknowledged">已确认</option>
+            <option value="accepted">已接受风险</option>
+          </select>
+        </label>
+        <label>责任人
+          <input id="annotationOwner" type="text" maxlength="60" placeholder="姓名或工号" />
+        </label>
+        <label class="annotation-note">备注
+          <input id="annotationNote" type="text" maxlength="500" placeholder="为什么这样处理" />
+        </label>
+        <button id="annotationSave" type="button">保存</button>
+      </div>
+      <p id="annotationStatus" class="muted small" aria-live="polite"></p>
+      <div id="annotationHistory" class="annotation-history"></div>
+
+      <p id="contractDetailNote" class="muted small"></p>
+      <div class="modal-foot">
+        <button id="contractDetailAnalyze" class="secondary" type="button">分析此合同</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <!-- Load order is fixed: the shell declares the state the other two read. -->
+  <script src="/static/js/contract-shell.js"></script>
+  <script src="/static/js/contract-ledger.js"></script>
+  <script src="/static/js/contract-chat.js"></script>
+</body>
+</html>

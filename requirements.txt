@@ -1,0 +1,31 @@
+# Required. The contract and chat modules build FastAPI routers.
+fastapi>=0.115
+tzdata>=2025.2
+
+# Optional: PDF text extraction. DOCX and XLSX need no dependency - both are
+# zips of XML, read with the standard library. PDF does, because the content
+# streams are compressed and CJK text needs font/CMap handling.
+pypdf>=6.0
+# pypdf needs a crypto backend for AES-encrypted PDFs, including the common
+# case of encryption with an empty user password.
+cryptography>=3.1
+
+# Optional: legacy binary .doc. Without it the extractor reports
+# `doc_reader_not_installed` rather than skipping the file silently. Even with
+# it, output passes a printable-ratio check and is discarded when it does not
+# read as text - a half-parsed .doc would otherwise feed the rules confident,
+# wrong evidence.
+olefile>=0.46
+
+# Optional: semantic retrieval for conversation memory. Both are imported
+# dynamically, and without them the system degrades to a null vector index and
+# a null embedding provider with a stated reason, rather than failing.
+#
+# fastembed runs the model locally through ONNX Runtime, so text is never sent
+# to a third-party embedding service. Qdrant runs in embedded file mode - no
+# server process, no port.
+qdrant-client>=1.9
+fastembed>=0.4
+
+# The tests need none of the optional entries: they exercise the degraded paths
+# as well as the working ones.
