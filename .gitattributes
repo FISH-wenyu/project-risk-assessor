@@ -1,0 +1,6 @@
+# The refresh pipeline reads files in text mode and writes them back with LF,
+# so without this every rebuild reports the whole tree as modified while the
+# content is byte-identical. That noise is worse than cosmetic: it hides the one
+# file that really did change. Pinning LF makes a rebuild produce either no diff
+# or a diff worth reading.
+* text=auto eol=lf
